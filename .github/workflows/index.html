@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Microsoft Service Health</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f5f6f8;--surface:#fff;--surface2:#f0f2f5;--surface3:#e8eaed;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+  --text:#1a1d23;--text2:#5a6070;--text3:#9099a8;
+  --accent:#0f6cbd;--accent-bg:#e8f3fb;
+  --green:#107c10;--green-bg:#e6f4e6;--green-border:#a8d5a8;
+  --yellow:#835b00;--yellow-bg:#fff8e0;--yellow-border:#f0d060;
+  --red:#a4262c;--red-bg:#fde7e9;--red-border:#f5a0a5;
+  --shadow:0 1px 3px rgba(0,0,0,0.07);--shadow-md:0 2px 10px rgba(0,0,0,0.09);
+  --r:10px;--rs:6px;
+}
+[data-theme="dark"] {
+  --bg:#0a0d12;--surface:#111620;--surface2:#171d2a;--surface3:#1e2535;
+  --border:rgba(255,255,255,0.07);--border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0;--text2:#8892a4;--text3:#4a5568;
+  --accent:#4fa3e0;--accent-bg:rgba(79,163,224,0.10);
+  --green:#4ec94e;--green-bg:rgba(34,197,94,0.10);--green-border:rgba(34,197,94,0.25);
+  --yellow:#f0b429;--yellow-bg:rgba(245,158,11,0.10);--yellow-border:rgba(245,158,11,0.30);
+  --red:#f87171;--red-bg:rgba(239,68,68,0.10);--red-border:rgba(239,68,68,0.30);
+  --shadow:0 1px 4px rgba(0,0,0,0.4);--shadow-md:0 2px 12px rgba(0,0,0,0.5);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;transition:background .2s,color .2s;}
+
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 32px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:var(--shadow);}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;width:24px;height:24px;}
+.logo-grid span{border-radius:1px;}
+.logo-grid span:nth-child(1){background:#f25022;}
+.logo-grid span:nth-child(2){background:#7fba00;}
+.logo-grid span:nth-child(3){background:#00a4ef;}
+.logo-grid span:nth-child(4){background:#ffb900;}
+.logo-text{font-size:14px;font-weight:600;}
+.logo-sub{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;}
+.hright{display:flex;align-items:center;gap:10px;}
+#last-update{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);}
+.btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--rs);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;border:1px solid var(--border2);transition:all .15s;background:var(--surface);color:var(--text2);}
+.btn:hover{background:var(--surface2);color:var(--text);}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-primary:hover{opacity:.9;}
+.btn.loading{opacity:.6;pointer-events:none;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.spin-icon.active{display:inline-block;animation:spin 1s linear infinite;}
+
+main{max-width:1400px;margin:0 auto;padding:24px 32px;}
+
+.summary-bar{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);transition:box-shadow .15s;}
+.sum-card:hover{box-shadow:var(--shadow-md);}
+.sum-icon{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;}
+.s-total .sum-icon{background:var(--accent-bg);}
+.s-healthy .sum-icon{background:var(--green-bg);}
+.s-degraded .sum-icon{background:var(--yellow-bg);}
+.s-incidents .sum-icon{background:var(--red-bg);}
+.sum-label{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace;letter-spacing:.05em;margin-bottom:3px;}
+.sum-value{font-size:26px;font-weight:600;line-height:1;}
+.s-healthy .sum-value{color:var(--green);}
+.s-degraded .sum-value{color:var(--yellow);}
+.s-incidents .sum-value{color:var(--red);}
+
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px;}
+.section-title{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;font-family:'JetBrains Mono',monospace;}
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border2);border-radius:var(--rs);padding:6px 12px;}
+.search-box input{background:none;border:none;outline:none;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);width:160px;}
+.search-box input::placeholder{color:var(--text3);}
+.filter-select{background:var(--surface);border:1px solid var(--border2);border-radius:var(--rs);padding:6px 10px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);cursor:pointer;outline:none;}
+
+.services-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;margin-bottom:28px;}
+.svc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rs);padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:box-shadow .15s,border-color .15s,background .15s;animation:fadeUp .3s ease both;}
+.svc-card:hover{box-shadow:var(--shadow-md);border-color:var(--border2);}
+.svc-card.active-filter{border-color:var(--accent);background:var(--accent-bg);box-shadow:0 0 0 2px rgba(15,108,189,0.15);}
+.svc-card.is-degraded.active-filter{border-color:var(--yellow);background:var(--yellow-bg);}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.is-healthy .status-dot{background:var(--green);}
+.is-degraded .status-dot{background:var(--yellow);animation:pulse-y 2s infinite;}
+.is-outage .status-dot{background:var(--red);animation:pulse-r 1.5s infinite;}
+@keyframes pulse-y{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.5)}50%{box-shadow:0 0 0 5px rgba(245,158,11,0)}}
+@keyframes pulse-r{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}50%{box-shadow:0 0 0 5px rgba(239,68,68,0)}}
+.svc-name{font-size:12px;font-weight:500;color:var(--text);flex:1;line-height:1.3;}
+.status-badge{font-size:10px;font-family:'JetBrains Mono',monospace;padding:2px 6px;border-radius:4px;font-weight:500;white-space:nowrap;}
+.badge-healthy{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);}
+.badge-degraded{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);}
+.badge-outage{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+.count-badge{font-size:10px;font-family:'JetBrains Mono',monospace;padding:2px 6px;border-radius:4px;font-weight:500;white-space:nowrap;background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+
+.filter-active-banner{display:none;align-items:center;gap:10px;padding:8px 14px;background:var(--accent-bg);border:1px solid rgba(15,108,189,0.2);border-radius:var(--rs);margin-bottom:12px;font-size:13px;color:var(--accent);}
+.filter-active-banner.visible{display:flex;}
+.clear-filter-btn{margin-left:auto;font-size:12px;cursor:pointer;background:none;border:none;color:var(--accent);font-family:'DM Sans',sans-serif;font-weight:500;padding:0;}
+.clear-filter-btn:hover{text-decoration:underline;}
+
+.incidents-list{display:flex;flex-direction:column;gap:10px;}
+.inc-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;animation:fadeUp .3s ease both;box-shadow:var(--shadow);}
+.inc-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:16px 20px;cursor:pointer;user-select:none;transition:background .15s;}
+.inc-header:hover{background:var(--surface2);}
+.inc-left{flex:1;min-width:0;}
+.inc-id{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);margin-bottom:3px;}
+.inc-svc{font-size:11px;color:var(--text3);margin-bottom:5px;}
+.inc-title{font-size:14px;font-weight:600;color:var(--text);line-height:1.4;}
+.inc-meta{display:flex;align-items:center;gap:8px;flex-shrink:0;padding-top:2px;}
+.class-badge{font-size:10px;font-family:'JetBrains Mono',monospace;padding:3px 8px;border-radius:4px;font-weight:500;}
+.class-incident{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border);}
+.class-advisory{background:var(--yellow-bg);color:var(--yellow);border:1px solid var(--yellow-border);}
+.chevron{color:var(--text3);font-size:11px;transition:transform .2s;flex-shrink:0;margin-top:3px;}
+.next-update-chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-family:'JetBrains Mono',monospace;padding:3px 9px;border-radius:4px;font-weight:500;white-space:nowrap;background:var(--green-bg);color:var(--green);border:1px solid var(--green-border);margin-top:6px;}
+.next-update-chip .chip-icon{font-size:10px;opacity:.8;}
+.inc-card.open .chevron{transform:rotate(180deg);}
+.age-bar{height:3px;background:var(--surface2);}
+.age-fill{height:100%;transition:width .5s;}
+.inc-body{display:none;border-top:1px solid var(--border);}
+.inc-card.open .inc-body{display:block;}
+.inc-summary{padding:16px 20px;background:var(--surface2);border-bottom:1px solid var(--border);}
+.meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}
+.meta-item label{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--text3);letter-spacing:.05em;display:block;margin-bottom:3px;}
+.meta-item span{font-size:13px;color:var(--text);font-weight:500;}
+.tl-section{padding:16px 20px;}
+.tl-section-title{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--text3);text-transform:uppercase;font-family:'JetBrains Mono',monospace;margin-bottom:14px;}
+.tl-full{position:relative;padding-left:20px;}
+.tl-full::before{content:'';position:absolute;left:5px;top:6px;bottom:6px;width:1px;background:var(--border2);}
+.tl-entry{position:relative;margin-bottom:16px;}
+.tl-entry:last-child{margin-bottom:0;}
+.tl-entry-dot{position:absolute;left:-18px;top:5px;width:9px;height:9px;border-radius:50%;border:2px solid var(--accent);background:var(--surface);}
+.tl-entry:first-child .tl-entry-dot{background:var(--accent);}
+.tl-entry-date{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3);margin-bottom:4px;}
+.tl-entry-text{font-size:13px;color:var(--text2);line-height:1.6;white-space:pre-wrap;}
+.tl-entry-text.collapsed{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+.show-more{font-size:11px;color:var(--accent);cursor:pointer;margin-top:4px;background:none;border:none;font-family:'DM Sans',sans-serif;padding:0;}
+.show-more:hover{text-decoration:underline;}
+
+.no-results{text-align:center;padding:32px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);color:var(--text3);font-size:13px;}
+.empty-state{text-align:center;padding:48px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);}
+.empty-icon{font-size:28px;margin-bottom:10px;}
+.empty-title{font-size:15px;font-weight:600;color:var(--green);margin-bottom:5px;}
+.empty-sub{font-size:13px;color:var(--text3);}
+.error-state{text-align:center;padding:48px;background:var(--surface);border:1px solid var(--red-border);border-radius:var(--r);}
+.error-title{font-size:14px;font-weight:600;color:var(--red);margin-bottom:6px;}
+.error-sub{font-size:13px;color:var(--text3);}
+
+.skeleton{background:linear-gradient(90deg,var(--surface) 25%,var(--surface2) 50%,var(--surface) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:var(--rs);}
+@keyframes shimmer{to{background-position:-200% 0;}}
+.skel-sm{height:52px;border-radius:var(--rs);}
+.skel-lg{height:80px;border-radius:var(--r);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+footer{text-align:center;padding:24px 32px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3);border-top:1px solid var(--border);margin-top:40px;}
+@media(max-width:640px){main{padding:16px;}header{padding:0 16px;}.summary-bar{grid-template-columns:repeat(2,1fr);}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-grid"><span></span><span></span><span></span><span></span></div>
+    <div><div class="logo-text">Microsoft Service Health</div><div class="logo-sub">M365 Monitoring Dashboard</div></div>
+  </div>
+  <div class="hright">
+    <span id="last-update">—</span>
+    <button class="btn" id="theme-btn" onclick="toggleTheme()" title="Cambia tema">🌙</button>
+    <button class="btn btn-primary" id="refresh-btn" onclick="loadData()">
+      <span class="spin-icon" id="spin-icon">↻</span> Aggiorna
+    </button>
+  </div>
+</header>
+
+<main>
+  <div class="summary-bar">
+    <div class="sum-card s-total"><div class="sum-icon">☁</div><div><div class="sum-label">Servizi totali</div><div class="sum-value" id="s-total">—</div></div></div>
+    <div class="sum-card s-healthy"><div class="sum-icon">✓</div><div><div class="sum-label">Operativi</div><div class="sum-value" id="s-healthy">—</div></div></div>
+    <div class="sum-card s-degraded"><div class="sum-icon">⚠</div><div><div class="sum-label">Degradati</div><div class="sum-value" id="s-degraded">—</div></div></div>
+    <div class="sum-card s-incidents"><div class="sum-icon">!</div><div><div class="sum-label">Incident attivi</div><div class="sum-value" id="s-incidents">—</div></div></div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Stato servizi</span>
+    <div class="toolbar">
+      <div class="search-box"><span style="color:var(--text3);font-size:13px">⌕</span><input type="text" id="svc-search" placeholder="Filtra servizi..." oninput="filterServices()"></div>
+      <select class="filter-select" id="svc-filter" onchange="filterServices()">
+        <option value="all">Tutti</option>
+        <option value="degraded">Solo degradati</option>
+        <option value="healthy">Solo operativi</option>
+      </select>
+    </div>
+  </div>
+  <div class="services-grid" id="services-grid">
+    <div class="skeleton skel-sm"></div><div class="skeleton skel-sm"></div><div class="skeleton skel-sm"></div>
+    <div class="skeleton skel-sm"></div><div class="skeleton skel-sm"></div><div class="skeleton skel-sm"></div>
+  </div>
+
+  <div class="section-header">
+    <span class="section-title">Incident attivi</span>
+    <div class="toolbar">
+      <div class="search-box"><span style="color:var(--text3);font-size:13px">⌕</span><input type="text" id="inc-search" placeholder="Cerca incident..." oninput="applyIncidentFilters()"></div>
+      <select class="filter-select" id="inc-svc-filter" onchange="applyIncidentFilters()"><option value="all">Tutti i servizi</option></select>
+      <select class="filter-select" id="inc-cls-filter" onchange="applyIncidentFilters()">
+        <option value="all">Tutti i tipi</option>
+        <option value="incident">Incident</option>
+        <option value="advisory">Advisory</option>
+      </select>
+    </div>
+  </div>
+  <div class="filter-active-banner" id="filter-banner">
+    <span id="filter-banner-text"></span>
+    <button class="clear-filter-btn" onclick="clearServiceFilter()">Rimuovi filtro ✕</button>
+  </div>
+  <div id="incidents-list">
+    <div class="skeleton skel-lg" style="margin-bottom:10px"></div>
+    <div class="skeleton skel-lg"></div>
+  </div>
+</main>
+
+<footer>Microsoft Service Health Dashboard · dati via Microsoft Graph API · uso interno</footer>
+
+<script>
+const FUNCTION_URL = 'https://servicehealthmonitoringdashboard-dwh8chcke5hvbmek.westeurope-01.azurewebsites.net/api/GetServiceHealth?code=hcdrfJ3CD5J3DPhB25VZy6gLsXGjb4fwvpEwyCNJfts2AzFuJ1hAAg==';
+
+let allHealth = [], allIssues = [], activeServiceFilter = null;
+
+const savedTheme = localStorage.getItem('theme') || 'light';
+document.documentElement.setAttribute('data-theme', savedTheme);
+document.getElementById('theme-btn').textContent = savedTheme === 'dark' ? '☀' : '🌙';
+
+function toggleTheme() {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  document.getElementById('theme-btn').textContent = next === 'dark' ? '☀' : '🌙';
+}
+
+function statusClass(s) {
+  if (!s) return 'is-healthy';
+  const v = s.toLowerCase();
+  if (['serviceoperational','falsepositive','servicerestored'].includes(v)) return 'is-healthy';
+  if (v === 'serviceoutage') return 'is-outage';
+  return 'is-degraded';
+}
+function statusLabel(s) {
+  const m = {serviceoperational:'Operativo',servicedegradation:'Degradato',serviceinterruption:'Interrotto',serviceoutage:'Outage',restoringservice:'Ripristino',extendedrecovery:'Recupero',falsepositive:'Operativo',servicerestored:'Ripristinato'};
+  return m[(s||'').toLowerCase()] || s || '—';
+}
+function badgeClass(s) {
+  const c = statusClass(s);
+  return c === 'is-healthy' ? 'badge-healthy' : c === 'is-outage' ? 'badge-outage' : 'badge-degraded';
+}
+function fmtDate(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleString('it-IT',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function daysSince(d) { return d ? Math.floor((Date.now()-new Date(d))/86400000) : 0; }
+function ageColor(days) { return days<=3?'#107c10':days<=7?'#c47f00':days<=14?'#c44000':'#a00'; }
+function agePercent(days) { return Math.min(100,(days/30)*100); }
+function stripHtml(html) {
+  return (html||'').replace(/<[^>]+>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\n{3,}/g,'\n\n').trim();
+}
+function incidentsForService(svcName) {
+  return allIssues.filter(i => i.service === svcName);
+}
+
+async function loadData() {
+  const btn = document.getElementById('refresh-btn');
+  const spin = document.getElementById('spin-icon');
+  btn.classList.add('loading'); spin.classList.add('active');
+  try {
+    const res = await fetch(FUNCTION_URL);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    allHealth = data.health || [];
+    allIssues = data.issues || [];
+    renderSummary();
+    renderServices();
+    renderIncidents();
+    populateServiceSelect();
+    document.getElementById('last-update').textContent = 'Aggiornato: ' + new Date().toLocaleTimeString('it-IT');
+  } catch(e) {
+    document.getElementById('services-grid').innerHTML = `<div class="error-state" style="grid-column:1/-1"><div class="error-title">Errore di caricamento</div><div class="error-sub">${e.message}</div></div>`;
+    document.getElementById('incidents-list').innerHTML = '';
+  } finally { btn.classList.remove('loading'); spin.classList.remove('active'); }
+}
+
+function renderSummary() {
+  const healthy = allHealth.filter(s => statusClass(s.status) === 'is-healthy').length;
+  document.getElementById('s-total').textContent = allHealth.length;
+  document.getElementById('s-healthy').textContent = healthy;
+  document.getElementById('s-degraded').textContent = allHealth.length - healthy;
+  document.getElementById('s-incidents').textContent = allIssues.length;
+}
+
+function renderServices(filtered) {
+  const list = filtered || allHealth;
+  const grid = document.getElementById('services-grid');
+  if (!list.length) { grid.innerHTML = '<div class="no-results" style="grid-column:1/-1">Nessun servizio trovato.</div>'; return; }
+  const sorted = [...list].sort((a,b) => {
+    const o = {'is-outage':0,'is-degraded':1,'is-healthy':2};
+    return (o[statusClass(a.status)]||2)-(o[statusClass(b.status)]||2);
+  });
+  grid.innerHTML = sorted.map((s,i) => {
+    const cnt = incidentsForService(s.service).length;
+    const badge = cnt > 0
+      ? `<span class="count-badge">${cnt}</span>`
+      : `<span class="status-badge ${badgeClass(s.status)}">${statusLabel(s.status)}</span>`;
+    const active = activeServiceFilter === s.service ? ' active-filter' : '';
+    return `<div class="svc-card ${statusClass(s.status)}${active}" style="animation-delay:${i*18}ms" onclick="clickServiceFilter('${s.service.replace(/'/g,"\\'")}')">
+      <div class="status-dot"></div>
+      <div class="svc-name">${s.service}</div>
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+function extractNextUpdate(posts) {
+  // Search posts from most recent to oldest
+  const ordered = (posts || []).slice().reverse();
+  for (const p of ordered) {
+    const txt = stripHtml(p.description?.content || '');
+    // Common patterns from Microsoft health messages (EN + IT)
+    const patterns = [
+      /next\s+update\s+(?:by|before|within|at)?\s*[:\-]?\s*([^\n\r.]{5,50})/i,
+      /next\s+(?:scheduled\s+)?update\s*[:\-]\s*([^\n\r.]{5,50})/i,
+      /estimated\s+(?:resolution|recovery|restore)\s*(?:time)?\s*[:\-]\s*([^\n\r.]{5,50})/i,
+      /we(?:'ll| will)\s+(?:provide\s+)?(?:an?\s+)?(?:next\s+)?update\s+by\s+([^\n\r.]{5,50})/i,
+      /prossimo\s+aggiornamento\s*[:\-]?\s*(?:entro\s+)?([^\n\r.]{5,50})/i,
+      /aggiornamento\s+previsto\s*[:\-]?\s*([^\n\r.]{5,50})/i,
+    ];
+    for (const rx of patterns) {
+      const m = txt.match(rx);
+      if (m) {
+        let val = m[1].trim().replace(/[.;,]+$/, '');
+        // Try to parse as date
+        const d = new Date(val);
+        if (!isNaN(d) && d > new Date('2000-01-01')) return fmtDate(d);
+        // Return raw text if short enough
+        if (val.length <= 45) return val;
+      }
+    }
+  }
+  return null;
+}
+
+function renderIncidents(filtered) {
+  const list = filtered !== undefined ? filtered : getFilteredIncidents();
+  const container = document.getElementById('incidents-list');
+  if (!list.length) {
+    const hasFilters = activeServiceFilter || document.getElementById('inc-search').value || document.getElementById('inc-svc-filter').value !== 'all' || document.getElementById('inc-cls-filter').value !== 'all';
+    container.innerHTML = hasFilters
+      ? '<div class="no-results">Nessun incident trovato con i filtri selezionati.</div>'
+      : `<div class="empty-state"><div class="empty-icon">✓</div><div class="empty-title">Nessun incident attivo</div><div class="empty-sub">Tutti i servizi Microsoft 365 risultano operativi.</div></div>`;
+    return;
+  }
+  const sorted = [...list].sort((a,b)=>new Date(b.lastModifiedDateTime)-new Date(a.lastModifiedDateTime));
+  container.innerHTML = sorted.map((inc,i) => {
+    const days = daysSince(inc.startDateTime);
+    const posts = (inc.posts||[]).slice().reverse();
+    const classCss = inc.classification === 'incident' ? 'class-incident' : 'class-advisory';
+    const classLabel = inc.classification === 'incident' ? 'Incident' : 'Advisory';
+    const affected = inc.details?.find(d=>d.name==='AffectedChildWorkloads');
+    const nextUpd = extractNextUpdate(inc.posts);
+    const nextUpdChip = nextUpd
+      ? `<div class="next-update-chip"><span class="chip-icon">⏱</span> Prossimo agg.: ${nextUpd}</div>`
+      : '';
+    const tlHtml = posts.map((p,pi)=>{
+      const txt = stripHtml(p.description?.content);
+      const long = txt.length > 350;
+      return `<div class="tl-entry">
+        <div class="tl-entry-dot"></div>
+        <div class="tl-entry-date">${fmtDate(p.createdDateTime)}</div>
+        <div class="tl-entry-text${long?' collapsed':''}" id="tc-${inc.id}-${pi}">${txt}</div>
+        ${long?`<button class="show-more" onclick="togglePost('${inc.id}',${pi},this)">Mostra tutto</button>`:''}
+      </div>`;
+    }).join('');
+    return `
+    <div class="inc-card" id="inc-${inc.id}" style="animation-delay:${i*35}ms">
+      <div class="inc-header" onclick="toggleIncident('${inc.id}')">
+        <div class="inc-left">
+          <div class="inc-id">${inc.id} · avviato ${fmtDate(inc.startDateTime)} · ${days} giorni fa</div>
+          <div class="inc-svc">${inc.service} › ${inc.featureGroup}</div>
+          <div class="inc-title">${inc.title}</div>
+          ${nextUpdChip}
+        </div>
+        <div class="inc-meta">
+          <span class="class-badge ${classCss}">${classLabel}</span>
+          <span class="chevron">&#9660;</span>
+        </div>
+      </div>
+      <div class="age-bar"><div class="age-fill" style="width:${agePercent(days)}%;background:${ageColor(days)}"></div></div>
+      <div class="inc-body">
+        <div class="inc-summary">
+          <div class="meta-grid">
+            <div class="meta-item"><label>SERVIZIO</label><span>${inc.service}</span></div>
+            <div class="meta-item"><label>FEATURE</label><span>${inc.feature||'—'}</span></div>
+            <div class="meta-item"><label>CLASSIFICAZIONE</label><span style="text-transform:capitalize">${inc.classification}</span></div>
+            <div class="meta-item"><label>INIZIO</label><span>${fmtDate(inc.startDateTime)}</span></div>
+            <div class="meta-item"><label>ULTIMO AGG.</label><span>${fmtDate(inc.lastModifiedDateTime)}</span></div>
+            <div class="meta-item"><label>DURATA</label><span>${days} giorni</span></div>
+            ${affected?`<div class="meta-item" style="grid-column:1/-1"><label>WORKLOAD IMPATTATI</label><span>${affected.value}</span></div>`:''}
+          </div>
+        </div>
+        <div class="tl-section">
+          <div class="tl-section-title">Cronologia (${posts.length} aggiornamenti)</div>
+          <div class="tl-full">${tlHtml}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleIncident(id) { document.getElementById('inc-'+id).classList.toggle('open'); }
+
+function togglePost(incId, pi, btn) {
+  const el = document.getElementById(`tc-${incId}-${pi}`);
+  const collapsed = el.classList.toggle('collapsed');
+  btn.textContent = collapsed ? 'Mostra tutto' : 'Mostra meno';
+}
+
+function clickServiceFilter(svcName) {
+  if (activeServiceFilter === svcName) { clearServiceFilter(); return; }
+  activeServiceFilter = svcName;
+  document.getElementById('inc-svc-filter').value = 'all';
+  document.getElementById('filter-banner-text').textContent = `Filtro attivo: ${svcName}`;
+  document.getElementById('filter-banner').classList.add('visible');
+  renderServices();
+  renderIncidents();
+  document.getElementById('incidents-list').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function clearServiceFilter(rerender=true) {
+  activeServiceFilter = null;
+  document.getElementById('filter-banner').classList.remove('visible');
+  if (rerender) { renderServices(); renderIncidents(); }
+}
+
+function getFilteredIncidents() {
+  const q = document.getElementById('inc-search').value.toLowerCase();
+  const svc = document.getElementById('inc-svc-filter').value;
+  const cls = document.getElementById('inc-cls-filter').value;
+  let list = allIssues;
+  if (activeServiceFilter) list = list.filter(i => i.service === activeServiceFilter);
+  if (q) list = list.filter(i => i.title.toLowerCase().includes(q)||i.id.toLowerCase().includes(q)||i.service.toLowerCase().includes(q));
+  if (svc !== 'all') list = list.filter(i => i.service === svc);
+  if (cls !== 'all') list = list.filter(i => i.classification === cls);
+  return list;
+}
+
+function applyIncidentFilters() {
+  if (activeServiceFilter) { activeServiceFilter = null; document.getElementById('filter-banner').classList.remove('visible'); renderServices(); }
+  renderIncidents(getFilteredIncidents());
+}
+
+function filterServices() {
+  const q = document.getElementById('svc-search').value.toLowerCase();
+  const f = document.getElementById('svc-filter').value;
+  let list = allHealth;
+  if (q) list = list.filter(s => s.service.toLowerCase().includes(q));
+  if (f === 'degraded') list = list.filter(s => statusClass(s.status) !== 'is-healthy');
+  if (f === 'healthy') list = list.filter(s => statusClass(s.status) === 'is-healthy');
+  renderServices(list);
+}
+
+function populateServiceSelect() {
+  const sel = document.getElementById('inc-svc-filter');
+  const svcs = [...new Set(allIssues.map(i=>i.service))].sort();
+  sel.innerHTML = '<option value="all">Tutti i servizi</option>' + svcs.map(s=>`<option value="${s}">${s}</option>`).join('');
+}
+
+loadData();
+</script>
+</body>
+</html>
